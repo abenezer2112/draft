@@ -1,4 +1,4 @@
-yes<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -33,6 +33,7 @@ yes<!doctype html>
       </label>
 
       <label class="vis-toggle"><input id="showVisual" type="checkbox"> Show visual</label>
+      <label class="steps-toggle"><input id="showSteps" type="checkbox"> Show steps automatically</label>
       <label>Object:
         <select id="objectChoice">
           <option value="🍎">Apple 🍎</option>
@@ -54,6 +55,7 @@ yes<!doctype html>
         <div class="answer-row">
           <input id="answerInput" type="number" inputmode="numeric" autocomplete="off" />
           <button id="submitBtn">Check</button>
+          <button id="hintBtn" class="hint">Hint</button>
         </div>
 
         <div id="feedback" class="feedback"></div>

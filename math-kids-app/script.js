@@ -18,6 +18,8 @@
   const showVisualChk = el('showVisual');
   const objectChoice = el('objectChoice');
   const visualDiv = el('visual');
+  const showStepsChk = el('showSteps');
+  const hintBtn = el('hintBtn');
 
   let state = {
     score: 0, correct: 0, wrong: 0, current: null
@@ -71,6 +73,10 @@
     feedback.textContent=''; feedback.className='feedback';
     explanationDiv.textContent = '';
     if(visualDiv) visualDiv.innerHTML = '';
+    // maybe auto-show steps
+    if(showStepsChk && showStepsChk.checked){
+      try{ explanationDiv.textContent = explainProblem(state.current); }catch(e){ explanationDiv.textContent = ''; }
+    }
   }
 
   function renderVisual(p){
@@ -159,6 +165,27 @@
     return '';
   }
 
+  function generateHint(p){
+    if(!p) return 'Try to look at the numbers and move pieces or count to see what changes.';
+    const {a,b,op,ans} = p;
+    if(op==='add'){
+      if(a < 20 && b < 20) return `Try counting on: start at ${a} and count up ${b} steps (or add ${b} to ${a}).`;
+      return `Break one number: add ${a} + ${Math.floor(b/10)*10} first, then add the rest. For example ${a} + ${b} = ${a} + ${Math.floor(b/10)*10} + ${b % 10}.`;
+    }
+    if(op==='sub'){
+      if(a >= b) return `Try counting back from ${a} by ${b} or remove ${b} objects from ${a}. If it helps, split ${b} into tens and ones.`;
+      return `Think about how many you would need to add to ${a} to reach ${b} (or borrow from a larger place).`;
+    }
+    if(op==='mul'){
+      if(b <= 5) return `Think of multiplication as repeated addition: ${a} + ${a} + '...' ${b} times.`;
+      return `Break it into easier parts: for example ${a}×${b} = ${a}×${Math.floor(b/2)} + ${a}×${Math.ceil(b/2)}.`;
+    }
+    if(op==='div'){
+      return `Try sharing ${a} into ${b} equal groups. Ask: how many in each group? You can make groups and count.`;
+    }
+    return 'Try to draw or move objects to see what changes.';
+  }
+
   function updateMeta(){ scoreSpan.textContent = state.score; correctSpan.textContent = state.correct; wrongSpan.textContent = state.wrong }
 
   function playSound(type){
@@ -200,8 +227,8 @@
       playSound('wrong');
     }
     updateMeta();
-    // show explanation to help them understand the logic
-    try{ explanationDiv.textContent = explainProblem(state.current); }catch(e){ explanationDiv.textContent = ''; }
+  // show explanation to help them understand the logic (if not auto-shown earlier)
+  try{ if(!showStepsChk || !showStepsChk.checked) explanationDiv.textContent = explainProblem(state.current); }catch(e){ explanationDiv.textContent = ''; }
     try{ renderVisual(state.current); }catch(e){ if(visualDiv) visualDiv.innerHTML = ''; }
     // prepare next after short delay
     setTimeout(()=>{ nextProblem(); }, 800);
@@ -210,7 +237,11 @@
   function nextProblem(){
     const op = operationSel.value;
     const diff = diffSel.value;
-    state.current = generateProblem(op, diff);
+    // consider adaptive difficulty per-op
+    const opKey = op === 'mixed' ? 'mixed' : op;
+    const perfs = loadProgress();
+    const curLevel = (perfs && perfs[opKey] && perfs[opKey].level) || diff;
+    state.current = generateProblem(op, curLevel || diff);
     showProblem();
   }
 
@@ -222,6 +253,15 @@
   });
 
   submitBtn.addEventListener('click', checkAnswer);
+  if(hintBtn) hintBtn.addEventListener('click', ()=>{
+    try{
+      explanationDiv.classList.add('hintmode');
+      explanationDiv.textContent = 'Hint: ' + generateHint(state.current || {});
+      // render a visual to support the hint
+      renderVisual(state.current || {});
+      setTimeout(()=>{ explanationDiv.classList.remove('hintmode'); }, 7000);
+    }catch(e){ explanationDiv.textContent = 'Hint: try to move things around.'; }
+  });
   answerInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') checkAnswer(); });
 
   // expose a tiny helper for dev / future saving
@@ -230,4 +270,42 @@
   // re-render visual when options change
   if(showVisualChk) showVisualChk.addEventListener('change', ()=>{ renderVisual(state.current || {}); });
   if(objectChoice) objectChoice.addEventListener('change', ()=>{ renderVisual(state.current || {}); });
+  if(showStepsChk) showStepsChk.addEventListener('change', ()=>{ if(showStepsChk.checked) explanationDiv.textContent = explainProblem(state.current || {}); else explanationDiv.textContent = ''; });
+
+  // Simple persistence: save/load progress by op
+  function loadProgress(){
+    try{ const raw = localStorage.getItem('mathFunProgress'); return raw? JSON.parse(raw): {}; }catch(e){ return {}; }
+  }
+
+  function saveProgress(perfs){
+    try{ localStorage.setItem('mathFunProgress', JSON.stringify(perfs)); }catch(e){}
+  }
+
+  // update performance after each answer
+  function recordPerformance(opKey, correct){
+    const perfs = loadProgress();
+    perfs[opKey] = perfs[opKey] || {level: diffSel.value, streak:0};
+    if(correct){ perfs[opKey].streak = (perfs[opKey].streak || 0) + 1; }
+    else { perfs[opKey].streak = Math.max(0, (perfs[opKey].streak || 0) - 1); }
+    // adjust level up/down on streaks
+    if(perfs[opKey].streak >= 3){
+      perfs[opKey].level = perfs[opKey].level === 'easy' ? 'medium' : perfs[opKey].level === 'medium' ? 'hard' : 'hard';
+      perfs[opKey].streak = 0;
+    }
+    if(perfs[opKey].streak === 0 && !correct){
+      // demote if failing repeatedly
+      perfs[opKey].level = perfs[opKey].level === 'hard' ? 'medium' : perfs[opKey].level === 'medium' ? 'easy' : 'easy';
+    }
+    saveProgress(perfs);
+  }
+
+  // wrap checkAnswer to record performance
+  const _origCheck = checkAnswer;
+  checkAnswer = function(){
+    const currentOp = (operationSel.value==='mixed')? 'mixed': state.current.op;
+    const beforeCorrect = state.correct;
+    _origCheck();
+    const gotCorrect = state.correct > beforeCorrect;
+    recordPerformance(currentOp, gotCorrect);
+  };
 })();
