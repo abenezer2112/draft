@@ -1,0 +1,79 @@
+yes<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MathFun for Kids</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>MathFun!</h1>
+      <p class="tag">Practice math with stars & sounds ⭐</p>
+    </header>
+
+    <section class="controls">
+      <label>Operation:
+        <select id="operation">
+          <option value="mixed">Mixed</option>
+          <option value="add">Addition (+)</option>
+          <option value="sub">Subtraction (-)</option>
+          <option value="mul">Multiplication (×)</option>
+          <option value="div">Division (÷)</option>
+        </select>
+      </label>
+
+      <label>Difficulty:
+        <select id="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+
+      <label class="vis-toggle"><input id="showVisual" type="checkbox"> Show visual</label>
+      <label>Object:
+        <select id="objectChoice">
+          <option value="🍎">Apple 🍎</option>
+          <option value="🍪">Cookie 🍪</option>
+          <option value="⭐">Star ⭐</option>
+          <option value="🚗">Car 🚗</option>
+        </select>
+      </label>
+
+      <button id="startBtn" class="primary">Start</button>
+    </section>
+
+    <main class="game" aria-live="polite">
+      <div id="status" class="status">Press Start to begin</div>
+
+      <div id="problemWrap" class="problem-wrap hidden">
+        <div id="problem" class="problem">5 + 3 = ?</div>
+
+        <div class="answer-row">
+          <input id="answerInput" type="number" inputmode="numeric" autocomplete="off" />
+          <button id="submitBtn">Check</button>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+  <div id="explanation" class="explanation" aria-live="polite"></div>
+  <div id="visual" class="visual" aria-hidden="false"></div>
+
+        <div class="meta">
+          <div>Score: <span id="score">0</span></div>
+          <div>Correct: <span id="correct">0</span> | Wrong: <span id="wrong">0</span></div>
+        </div>
+      </div>
+
+      <div id="stars" class="stars" aria-hidden="true"></div>
+    </main>
+
+    <footer>
+      <small>Created for kids — open this file in any modern browser.</small>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
